@@ -1,0 +1,131 @@
+O algoritmo Simulated Annealing é um método de busca local que permite movimentos que não são de melhora. Ele é usado para encontrar a solução ótima em um espaço de soluções. O algoritmo é baseado no processo físico de recozimento (annealing) de substâncias físicas como metais. O recozimento envolve fundir o material a alta temperatura e depois resfriá-lo lentamente até atingir o estado sólido. Na fase líquida (alta temperatura), o material possui uma configuração de alta energia onde suas partículas se arranjam aleatoriamente. A cada diminuição  de temperatura (resfriamento), o material muda para uma configuração de nível de energia mais baixo. Na fase sólida, existe a configuração de energia mínima onde as partículas se arranjam em uma rede altamente estruturada (cristais perfeitos). O nível de energia mínima só é alcançado se a temperatura inicial for suficientemente alta e o resfriamento for suficientemente devagar. Se o resfriamento for rápido, o cristal não atingirá o nível mínimo de energia e conterá inúmeras imperfeições. O algoritmo Simulated Annealing permite movimentos de subida na busca local possibilitando escapar de mínimos locais. Ele foi proposto por S. Kirkpatrick, D.C. Gellat, and M.P. Vecchi em 1983 1.
+
+Para implementar o algoritmo Simulated Annealing em C, você pode seguir os passos abaixo:
+
+    Defina uma função de custo que avalia a qualidade da solução.
+    Defina uma função de vizinhança que gera uma solução vizinha.
+    Defina uma função de aceitação que decide se a solução vizinha deve ser aceita ou não.
+    Defina uma função de resfriamento que diminui a temperatura do sistema.
+    Inicialize a solução inicial e a temperatura inicial.
+    Repita até que a condição de parada seja atendida:
+        Gere uma solução vizinha.
+        Decida se a solução vizinha deve ser aceita ou não.
+        Diminua a temperatura do sistema.
+    Retorne a melhor solução encontrada.
+========================================================================
+precisará definir suas próprias funções para initialSolution, pickRandomNeighbor, cost e reduceTemperature para que o algoritmo funcione corretamente.
+
+function initialSolution() {
+  // Defina sua solução inicial aqui
+  let S = [1, 2, 3, 4, 5];
+  return S;
+}
+
+function pickRandomNeighbor(S) {
+  // Defina sua lógica para escolher um vizinho aleatório aqui
+  let S_ = S.slice();
+  let i = Math.floor(Math.random() * S_.length);
+  let j = Math.floor(Math.random() * S_.length);
+  let temp = S_[i];
+  S_[i] = S_[j];
+  S_[j] = temp;
+  return S_;
+}
+
+function cost(solucao) {
+  let custo = 0;
+  for (let i = 0; i < solucao.length - 1; i++) {
+    let cidadeAtual = solucao[i];
+    let proximaCidade = solucao[i + 1];
+    custo += distancia(cidadeAtual, proximaCidade);
+  }
+  return custo;
+}
+Neste exemplo, solucao é uma matriz que contém as cidades visitadas pelo caixeiro viajante na ordem em que foram visitadas. A função distancia é uma função auxiliar que calcula a distância entre duas cidades.
+
+    Use a função de custo em conjunto com o algoritmo Simulated Annealing para encontrar a melhor solução para o problema. Aqui está um exemplo de como você pode implementar o algoritmo Simulated Annealing em JavaScript:
+
+function simulatedAnnealing() {
+  let solucaoAtual = gerarSolucaoInicial();
+  let temperatura = temperaturaInicial;
+  while (temperatura > temperaturaFinal) {
+    let novaSolucao = gerarVizinho(solucaoAtual);
+    let deltaCusto = cost(novaSolucao) - cost(solucaoAtual);
+    if (deltaCusto < 0) {
+      solucaoAtual = novaSolucao;
+    } else {
+      let probabilidade = Math.exp(-deltaCusto / temperatura);
+      if (Math.random() < probabilidade) {
+        solucaoAtual = novaSolucao;
+      }
+    }
+    temperatura *= taxaResfriamento;
+  }
+  return solucaoAtual;
+}
+========================================================================
+function reduceTemperature(temperaturaAtual, taxaResfriamento) {
+  return temperaturaAtual * taxaResfriamento;
+}
+Neste exemplo, temperaturaAtual é a temperatura atual do algoritmo e taxaResfriamento é a taxa de resfriamento do algoritmo.
+
+    Use a função reduceTemperature em conjunto com o algoritmo Simulated Annealing para encontrar a melhor solução para o problema. Aqui está um exemplo de como você pode modificar o código do algoritmo Simulated Annealing para incluir a função reduceTemperature:
+
+function simulatedAnnealing() {
+  let solucaoAtual = gerarSolucaoInicial();
+  let temperatura = temperaturaInicial;
+  while (temperatura > temperaturaFinal) {
+    let novaSolucao = gerarVizinho(solucaoAtual);
+    let deltaCusto = cost(novaSolucao) - cost(solucaoAtual);
+    if (deltaCusto < 0) {
+      solucaoAtual = novaSolucao;
+    } else {
+      let probabilidade = Math.exp(-deltaCusto / temperatura);
+      if (Math.random() < probabilidade) {
+        solucaoAtual = novaSolucao;
+      }
+    }
+    temperatura = reduceTemperature(temperatura, taxaResfriamento);
+  }
+  return solucaoAtual;
+}
+Neste exemplo, gerarSolucaoInicial é uma função que gera uma solução inicial aleatória para o problema, gerarVizinho é uma função que gera uma solução vizinha a partir da solução atual, temperaturaInicial é a temperatura inicial do algoritmo, temperaturaFinal é a temperatura final do algoritmo, taxaResfriamento é a taxa de resfriamento do algoritmo e Math.random() é uma função que gera um número aleatório entre 0 e 1.
+
+========================================================================
+function simulatedAnnealing() {
+  // Defina sua solução inicial aqui
+  let S = initialSolution;
+  // Defina sua temperatura inicial aqui
+  let T = initialTemperature;
+  while (T > 0) {
+    // Escolha um vizinho aleatório para S
+    let S_ = pickRandomNeighbor(S);
+    // Calcule o custo de S e S_
+    let C = cost(S) - cost(S_);
+    if (C > 0) {
+      S = S_;
+    } else {
+      // Calcule a probabilidade de aceitar S_
+      let r = Math.random();
+      let m = Math.exp(C / T);
+      if (r < m) {
+        S = S_;
+      }
+    }
+    // Reduza a temperatura
+    T = reduceTemperature(T);
+  }
+  // Retorne a solução final
+  return S;
+}
+=============================================================
+ function acceptanceFunction(deltaE, temperature) {
+  if (deltaE < 0) {
+    return true;
+  } else {
+    const probability = Math.exp(-deltaE / temperature);
+    const random = Math.random();
+    return random < probability;
+  }
+}
+==============================================================
