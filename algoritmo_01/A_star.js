@@ -3,7 +3,7 @@ function distanciaDoisPontos(x1, y1, x2, y2) {
     let cateto2 = y1 - y2;
     let somaQuadradoCatetos = Math.pow(cateto1, 2) + Math.pow(cateto2, 2);
     let resultado = Math.sqrt(somaQuadradoCatetos);
-    return resultado; 
+    return resultado;  
 };
 
 function pontoExiste(matriz, ponto = [x, y]) {
