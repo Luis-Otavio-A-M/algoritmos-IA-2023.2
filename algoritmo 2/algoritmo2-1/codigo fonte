@@ -1,0 +1,446 @@
+%
+%  annealing - por Anja Pratschke & Jorge Marques Pelizzoni.
+%
+%  Este programa Prolog emprega Simulated Annealing para implementar uma solucao
+%  para o problema de scheduling, instanciado como a criacao de uma grade hora-
+%  ria minimizando o numero de periodos escolares, dados (i) um conjunto de dis-
+%  ciplinas, (ii) seus respectivos pre-requisitos e (iii) o numero maximo de 
+%  disciplinas que podem ser cursadas por periodo. 
+%
+%  Predicado principal: bestSch/3.
+%
+%  Instrucoes de uso:
+%
+%    bestSch(Sch-, T0+, Tf+) recebe parametros explicitos, T0 e Tf, respectiva-
+%    mente as temperaturas inicial e final do processo de annealing, e parame-
+%    tros implicitos, por meio dos predicados:
+%
+%    - class/2, definindo pares (disciplina, lista de pre-requisitos) com os 
+%      quais se deve compor a grade de horario;
+%
+%    - maxNClasses/1, definindo o numero maximo de disciplinas por periodo;
+%
+%    - nextT/5, definindo a funcao de resfriamento da temperatura. Espera-se 
+%      que a meta nextT(CurT, CurI, T0, Tf, NextT) case NextT com o valor da 
+%      temperatura vigente na proxima iteracao do algoritmo, dada a tempera-
+%      tura corrente (NextT), o numero de iteracoes completas (CurI), as tem-
+%      peraturas inicial e final (T0 e Tf).
+%
+%    A principio, a determinacao de T0 e Tf (e talvez de nextT) deve ser refei-
+%    ta para cada novo conjunto de disciplinas, variando principalmente com a
+%    cardinalidade desse conjunto e das relacoes de dependencia de pre-requisi-
+%    to nele especificadas. Tarefa nao-trivial, esses parametros sao geralmente
+%    obtidos por um processo de tentativa-e-erro, comparacao e experiencia.
+%
+%    Segue um exemplo de configuracao de entrada.
+%
+
+
+%
+%  Exemplo de configuracao de entrada 
+%
+%  bestSch(Sch, 10, 0.1) se comportou bem para os seguintes dados:
+%
+
+maxNClasses(4).
+
+class(filos, []).
+class(icc, []).
+class(ed, [icc]).
+class(ia, [filos, icc]).
+class(arq, [filos]).
+class(vr, [ia, arq]).
+
+/* outro conjunto, para comparacao:
+class(filos, []).
+class(icc, []).
+class(ed, []).
+class(ia, []).
+class(arq, []).
+class(vr, []).
+*/
+
+nextT(T, _, _, _, NextT) :-
+  NextT is T*0.95.  
+
+%
+%  bestSch(Sch, T0, Tf) - predicado principal
+%
+%  Procura otimizar uma grade de horario por um processo de resfriamento da 
+%  temperatura T0 ate Tf, retornando o resultado em Sch.
+%
+%  Vide cabecalho do programa para maiores esclarecimentos.
+%
+
+bestSch(Sch, T0, Tf) :-
+  start(Start),
+  anneal(T0, Tf, Start, Sch).
+
+
+%
+%  start/1
+%
+%  Encontra uma grade de horario "pessima", ou seja, com cada disciplina sendo
+%  cursada em um período exclusivo. Esse predicado eh usado para encontrar a
+%  solucao inicial a ser otimizada.
+%
+
+start(Sch) :-
+  functor(X, class, 2),
+  findall(X, X, Cs),
+  oneClassPerTerm(Cs, Sch).
+
+
+%
+%  oneClassPerTerm(Classes, Sch)
+%
+%  Monta uma grade pessima Sch com todas as disciplinas da lista Classes.
+% 
+
+oneClassPerTerm(Cs, Sch) :- 
+  oneClassPerTerm(Cs, sch([], 0), Sch).
+
+oneClassPerTerm([], sch(Ts, Len), sch(Ts, Len, Len)) :-
+  !.
+
+oneClassPerTerm(Cs, Sch0, Sch) :-
+  oneOut(C, Cs, NextCs),
+  allPresIn(C, Sch0),
+  !,
+  Sch0 = sch(Ts, Len),
+  NextLen is Len + 1,
+  oneClassPerTerm(NextCs, sch([term([C], 1)| Ts], NextLen), Sch).
+
+
+%
+%  allPresIn(Class, Sch)
+%
+%  Bem-sucedido se todos os pre-requisitos da disciplina Class sao encontrados
+%  na grade Sch.
+%
+
+allPresIn(Class, Sch) :-
+  class_pre(Class, Pre),
+  not sch_classId(Sch, Pre),
+  !,
+  fail.
+
+allPresIn(_, _).
+
+
+%
+%  Predicados nao deterministicos de acesso `as estruturas de dados (leem-se `a
+%  maneira dos predicados de conversao)
+%
+
+%  class_pre(C, Pre) :- Pre eh pre-requisito da disciplina C.
+%
+class_pre(class(_, Pres), Pre) :- 
+  elem(Pre, Pres).
+
+%  sch_classId(Sch, CId) :- CId eh id de uma disciplina na grade Sch.
+%
+sch_classId(sch(Ts, _), CId) :-
+  elem(T, Ts),
+  term_classId(T, CId).
+
+%  term_classId(T, CId) :- CId eh id de uma disciplina no periodo T.
+%
+term_classId(term(Cs, _), CId) :-
+  elem(class(CId, _), Cs).
+
+%  term_pre(T, Pre) :- Pre eh pre-requisito de uma disciplina no periodo T.
+%
+term_pre(term(Cs, _), Pre) :-
+  elem(C, Cs),
+  class_pre(C, Pre).
+  
+%  full(T) :- nao cabem mais disciplinas no periodo T.
+%
+full(term(_, NCs)) :-
+  maxNClasses(NCs).
+
+%
+%  deltaE(Sch1+, Sch0+, Delta?)
+%
+%  Delta = energia(Sch1) - energia(Sch0), onde:
+%
+%  - Sch0, Sch1: grades de horario;
+%  - energia(Sch) = numero de periodos em Sch.
+%
+
+deltaE(sch(_, NTs1, _), sch(_, NTs0, _), Delta) :-
+  Delta is NTs1 - NTs0.
+
+%
+%  anneal(T0, Tf, Start, Min)
+%
+%  Retorna em Min o resultado do resfriamento da solucao Start a partir da tem-
+%  peratura T0 ate Tf.
+%
+
+anneal(T0, Tf, Start, Min) :-
+  anneal(T0, 1, T0, Tf, Start, Min).
+
+%
+%  anneal/6 - implementacao do processo de Simulated Annealing
+%
+%  Cada nivel de chamada `a meta anneal(T, I, T0, Tf, CurState, Min) corresponde 
+%  a uma iteracao do algoritmo, onde
+%
+%  - T: temperatura corrente;
+%  - I: ordem da iteracao corrente;
+%  - T0/Tf: temperatura inicial/final;
+%  - CurState: solucao corrente;
+%  - Min: minimo encontrado.
+%
+
+anneal(T, _, _, Tf, Min, Min) :-
+  T =< Tf,
+  !.
+
+anneal(T, I, T0, Tf, State, Min) :-
+  nextState(State, T, NextState),
+  nextT(T, I, T0, Tf, NextT),
+  NextI is I + 1,
+  anneal(NextT, NextI, T0, Tf, NextState, Min).
+
+
+%
+%  nextState(State, T, Next)
+%
+%  determina o proximo candidato a minimo (Next), dada a temperatura corrente
+%  (T) e o candidato corrente (State). 
+%
+  
+nextState(State, T, Next) :-
+  randomNeighb(State, Next, DeltaE),
+  goodTrans(DeltaE, T),
+  !.
+
+nextState(S, _, S).
+
+
+%
+%  goodTrans(DeltaE, T)
+%
+%  Bem-sucedido se a transicao para o proximo estado "sorteado" eh considerada
+%  boa, ou porque a energia diminuiu, ou porque a temperatura e a sorte concor-
+%  rem para isso.
+%
+
+goodTrans(DeltaE, _) :-
+  DeltaE =< 0,
+  !.
+
+goodTrans(DeltaE, T) :-
+  ProbStep is exp(-DeltaE/T),
+  maybe(ProbStep).
+
+%
+%  randomNeighb(Sch0, Sch2, DeltaE)
+%
+%  Seleciona (gera) aleatorimente um vizinho da solucao Sch0, Sch2, retornando,
+%  em DeltaE, a diferenca energia(Sch2) - energia(Sch0).
+%
+%  Obs.: esse predicado nao se prova verdadeiro ao ser backtracked.
+%
+
+randomNeighb(Sch0, Sch2, DeltaE) :-
+  randomClassOut(C, Sch0, Sch1),
+  randomClassIn(C, Sch1, Sch2),
+  deltaE(Sch2, Sch0, DeltaE).
+
+%
+%  randomClassOut(C-, Sch0+, Sch1-)
+%
+%  Sch1 eh igual a Sch0 com excecao da retirada de uma disciplina C qualquer 
+%  e da supressao de um eventual periodo vazio resultante.
+%
+%  Obs.: esse predicado eh eminentemente procedimental e nao se prova verda-
+%  deiro ao ser backtracked.
+%
+
+randomClassOut(C, Sch0, Sch1) :-
+  arg(3, Sch0, NCs),
+  ClassI is 1 + integer(random*NCs),
+  classOut(ClassI, C, Sch0, Sch1).
+
+%
+%  randomClassIn(C+, Sch0+, Sch1-)
+%
+%  Sch1 eh igual a Sch0 com excecao da insercao da disciplina C em qualquer 
+%  confiracao que nao invalide Sch1.
+%
+%  Obs.: esse predicado eh eminentemente procedimental e nao se prova verda-
+%  deiro ao ser backtracked.
+%
+
+randomClassIn(C, Sch0, Sch1) :-
+  insRange(C, Sch0, Range),     % <- Onde C pode ser inserida? Resp: Range.
+  randomInsOp(Op, Range),       % <- sorteio de uma operacao de insercao.
+  classIn(Op, C, Sch0, Sch1).
+
+%
+%  randomInsOp(Op, InsRange)
+%
+%  Sorteia uma operacao de insercao Op dentro da faixa InsRange.
+%
+
+randomInsOp(newTerm(I), range(Min, Max, _)) :-  % <- novo periodo I, exclusivo.
+  maybe(0.5),
+  !,
+  I is 1 + Min + integer(random*(Max - Min)). %  <- I no intervalo (Min, Max].
+
+
+randomInsOp(intoTerm(I), range(Min, Max, Flls)) :-  % <- dentro do periodo I.
+  repeat,
+  I is 1 + Min + integer(random*(Max - Min - 1)), %  <- I no intervalo (Min, Max).
+  not elem(I, Flls),
+  !.
+
+%
+%  classOut(N, C, Sch0, Sch1)
+%
+%  Retira a N-esima disciplina (C) da grade Sch0, resultando em Sch1, devida-
+%  mente corrigida quanto a periodos vazios.
+%
+
+classOut(N, C, sch(Ts, NTs, NCs), sch(NewTs, NewNTs, NewNCs)) :-
+  classOut2(N, C, sch(Ts, NTs), sch(NewTs, NewNTs)),
+  NewNCs is NCs - 1.
+
+classOut2(N, C, sch([term(Cs, NCs)| Ts], NTs), Sch) :-
+  N =< NCs,
+  !,
+  nthOut1(N, C, Cs, NewCs),
+  NewNCs is NCs - 1,
+  classOut2Rslt(term(NewCs, NewNCs), Ts, NTs, Sch).
+
+classOut2(N, C, sch([T| Ts], NTs), sch([T| NewTs], NewNTs)) :-
+  arg(2, T, NCs),
+  NextN is N - NCs,
+  classOut2(NextN, C, sch(Ts, NTs), sch(NewTs, NewNTs)).
+
+
+classOut2Rslt(term([], _), Ts, NTs, sch(Ts, NewNTs)) :-
+  !,
+  NewNTs is NTs - 1.  
+
+classOut2Rslt(T, Ts, NTs, sch([T| Ts], NTs)).
+
+%
+%  insRange(C, Sch, Range)
+%
+%  Range eh a faixa dos possiveis pontos de insercao da disciplina C na grade 
+%  Sch, respeitando-se as restricoes de pre-requisito e numero maximo de dis-
+%  ciplinas por periodo.
+%
+%  Range = range(Min, Max, Flls), onde:
+% 
+%  - a faixa (Min, Max) delimita os indices dos possiveis periodos onde C pode 
+%    entrar;
+%  - Flls eh uma lista contendo os indices dos periodos cheios dentro dessa fai-
+%    xa.
+%
+
+insRange(C, sch(Ts, NTs, _), Range) :-
+  Max is NTs + 1,
+  insRange2(C, Ts, NTs, range(0, Max, []), Range).
+
+
+insRange2(_, [], _, Range, Range).
+
+insRange2(C, [T| _], I, range(_, Max, Flls), range(I, Max, Flls)) :-
+  class_pre(C, Pre),
+  term_classId(T, Pre),
+  !.
+
+insRange2(C, [T| Ts], I, CurRange, Range) :-
+  updateRange(C, T, I, CurRange, NextRange),
+  NextI is I - 1,
+  insRange2(C, Ts, NextI, NextRange, Range).
+
+
+updateRange(class(Id, _), T, I, range(Min, _, _), range(Min, I, [])) :-
+  term_pre(T, Id),
+  !.
+
+updateRange(_, T, I, range(Min, Max, Flls), range(Min, Max, [I| Flls])) :-
+  full(T),
+  !.
+
+updateRange(_, _, _, Range, Range).
+
+%
+%  classIn(Op, C, Sch0, Sch1)
+%
+%  Insere a disciplina C na grade Sch0 como especificao por Op, resultando em 
+%  Sch1.
+%
+
+classIn(newTerm(I), C, sch(Ts, NTs, NCs), sch(NewTs, NewNTs, NewNCs)) :-
+  !,
+  TermI is NTs - I + 2,
+  NewNTs is NTs + 1,
+  NewNCs is NCs + 1,
+  nthOut1(TermI, term([C], 1), NewTs, Ts).
+
+classIn(intoTerm(I), C, sch(Ts, NTs, SchNCs), sch(NewTs, NTs, NewSchNCs)) :-
+  TermI is NTs - I + 1,
+  NewSchNCs is SchNCs + 1,
+  swapNth1(TermI, term(Cs, TermNCs), term([C| Cs], NewTermNCs), Ts, NewTs),
+  NewTermNCs is TermNCs + 1.
+
+%
+%  Predicados de uso geral (utilitarios)
+%
+
+%  maybe(Prob) :- true com probabilidade Prob.
+%
+maybe(Prob) :-  
+  random < Prob.
+
+%  elem(X, L) :- X eh elemento da lista L.
+%
+elem(X, [X| _]).
+
+elem(X, [_| Tail]) :-
+ elem(X, Tail).
+
+%  oneOut(X, L1, L2) :- L2 eh igual a L1 com excecao da retirada do elemento X.
+%
+oneOut(X, [X| Tail], Tail).
+
+oneOut(X, [Head| Tail0], [Head| Tail1]) :-
+  oneOut(X, Tail0, Tail1).
+
+
+%  nthOut(N, X, L1, L2) :- L2 eh igual a L1 com execao da retirada do elemento
+%                          de indice N, X.
+%
+nthOut(1, X, [X| Xs], Xs).
+
+nthOut(N, X, [Y| Xs], [Y| Ys]) :-
+  nthOut(PrevN, X, Xs, Ys),
+  N is PrevN + 1.
+
+
+nthOut1(N, X, Xs, Ys) :-
+  nthOut(N, X, Xs, Ys),
+  !.
+
+%  swapNth(N, X, Y, L1, L2) :- L1 e L2 diferem exata e somente em seus elemen-
+%                              tos de ordem N, respectivamente, X e Y.
+%
+swapNth(1, X, Y, [X| Xs], [Y| Xs]).
+
+swapNth(N, X, Y, [Z| Xs], [Z| Ys]) :-
+  swapNth(PrevN, X, Y, Xs, Ys),
+  N is PrevN + 1.
+
+
+swapNth1(N, X, Y, Xs, Ys) :-
+  swapNth(N, X, Y, Xs, Ys),
+  !.
+  
