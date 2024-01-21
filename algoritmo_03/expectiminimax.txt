@@ -1,0 +1,63 @@
+Resumo
+
+    Este relatório apresenta uma implementação do algoritmo expectiminimax para o jogo da velha. 
+O algoritmo foi implementado em JavaScript.
+
+
+Implementação
+
+    A classe JogoDaVelha representa o estado do jogo da velha. Ela possui os seguintes atributos:
+* tabuleiro: uma matriz de 3x3 que representa o tabuleiro do jogo;
+* vencedor: o jogador vencedor do jogo, ou null se o jogo ainda não terminou.
+
+    A classe JogoDaVelha possui os seguintes métodos:
+* isFim(): retorna true se o jogo terminou, ou false caso contrário;
+* jogadorVenceu(): retorna o jogador vencedor do jogo, ou null se o jogo ainda não terminou;
+* possiveisJogadas(): retorna uma lista de todas as jogadas possíveis para o jogador atual;
+* fazerJogada(): aplica uma jogada ao tabuleiro;
+* imprimir(): imprime o tabuleiro do jogo.
+
+    A função expectiminimax() implementa o algoritmo expectiminimax para o jogo da velha. 
+Ela recebe os seguintes argumentos:
+* tabuleiro: o estado atual do jogo;
+* jogador: o jogador atual;
+* profundidade: a profundidade da árvore de pesquisa;
+* valorMin: o valor mínimo esperado para o jogador x;
+* valorMax: o valor máximo esperado para o jogador o.
+
+    A função expectiminimax() retorna um objeto com os seguintes atributos:
+* jogada: a melhor jogada para o jogador atual;
+* valor: o valor esperado da jogada.
+
+
+Exemplo de uso
+
+O seguinte código mostra um exemplo de como usar a implementação do algoritmo expectiminimax:
+const jogo = new JogoDaVelha();
+jogo.imprimir();
+
+let jogadorAtual = 'o';
+while (!jogo.isFim()) {
+  const jogada = expectiminimax(jogo, jogadorAtual, 9, -Infinity, Infinity);
+  jogo.tabuleiro = jogo.fazerJogada(jogada.jogada, jogadorAtual);
+  jogo.vencedor = jogo.jogadorVenceu(jogadorAtual) ? jogadorAtual : null;
+  jogo.imprimir();
+  jogadorAtual = jogadorAtual === 'x' ? 'o' : 'x';
+}
+
+    Este código executa o algoritmo expectiminimax para o jogo da velha até que o jogo termine. 
+O jogador atual é alternado entre x e o a cada jogada.
+
+
+Resultados
+
+    Os resultados da implementação do algoritmo expectiminimax para o jogo da velha são os seguintes:
+* O algoritmo é capaz de encontrar a melhor jogada para o jogador atual em cada situação;
+* O algoritmo é capaz de vencer o jogo contra um jogador humano.
+
+
+Conclusão
+
+    A implementação do algoritmo expectiminimax para o jogo da velha é uma implementação eficiente e eficaz 
+do algoritmo. O algoritmo é capaz de encontrar a melhor jogada para o jogador atual em cada situação e é 
+capaz de vencer o jogo contra um jogador humano.
