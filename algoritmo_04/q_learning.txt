@@ -1,0 +1,51 @@
+Resumo
+
+    Este relatório descreve a implementação do jogo da velha em JavaScript, 
+utilizando o algoritmo Q-learning para a tomada de decisões do agente 'x'.
+
+
+Implementação
+
+    A classe QLearningJogoDaVelha foi desenvolvida para representar o tabuleiro 
+do jogo e aplicar o algoritmo Q-learning. Os principais componentes da implementação são:
+* tabuleiro: Uma matriz que representa o estado atual do jogo, onde 0 indica uma posição vazia;
+* vencedor: O jogador que venceu o jogo, ou null se o jogo ainda não terminou;
+* tabelaQ: A tabela Q, que armazena os valores Q para cada estado e ação.
+
+    A classe QLearningJogoDaVelha inclui métodos como isFim(), getQValue(), updateQValue(), 
+escolherProximaJogada(), jogadorVenceu(), possiveisJogadas(), fazerJogada() e imprimir().
+
+
+Exemplo de Uso
+
+    O seguinte código demonstra como utilizar a implementação do Q-learning para o jogo da velha:
+const jogoQLearning = new QLearningJogoDaVelha();
+jogoQLearning.imprimir();
+
+let jogadorAtual = 'o';
+const epsilon = 0.1; // Taxa de exploração
+// Enquanto o jogo não terminar, faz jogadas
+while (!jogoQLearning.isFim()) {
+  const jogada = jogoQLearning.escolherProximaJogada(epsilon);
+  jogoQLearning.tabuleiro = jogoQLearning.fazerJogada(jogada, jogadorAtual);
+  jogoQLearning.vencedor = jogoQLearning.jogadorVenceu(jogadorAtual) ? jogadorAtual : null;
+  jogoQLearning.imprimir();
+  // Alterna o jogador
+  jogadorAtual = jogadorAtual === 'x' ? 'o' : 'x';
+}
+
+
+Resultados
+
+    Os resultados da implementação do algoritmo Q-learning para o jogo da velha incluem:
+* O agente 'x' é capaz de aprender a melhor jogada para cada situação do jogo;
+* O jogo é capaz de determinar um vencedor ou empate contra um jogador humano, 
+  dependendo da taxa de exploração.
+
+Conclusão
+
+    A implementação do Q-learning para o jogo da velha foi bem-sucedida, permitindo que o 
+agente 'x' tome decisões estratégicas com base na aprendizagem de experiências passadas. 
+Testes realizados no ambiente de desenvolvimento confirmam o funcionamento adequado do jogo. 
+A utilização do Q-learning proporciona uma abordagem dinâmica e adaptativa para a tomada de 
+decisões, tornando o jogo da velha mais desafiador e interativo.
